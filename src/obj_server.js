@@ -5,8 +5,8 @@ class ObjServer {
   constructor(io) {
     this.io = io;
     this.seal_im_client = new SealIMClient();
-    this.subscrib_list = {};
-    this.sockets = {};
+    //this.subscrib_list = {};
+    //this.sockets = {};
     this.io.on("connection", this.handleConnection.bind(this));
     this.io.eio.pingTimeout = 120000; // 2 minutes
     this.io.eio.pingInterval = 5000; // 5 seconds
@@ -24,15 +24,15 @@ class ObjServer {
     }
 
     console.log(`[connected][${user_id}][${socket.id}]`);
-    this.sockets[user_id] = this.sockets[user_id] || {};
-    this.sockets[user_id][socket.id] = socket;
+    //this.sockets[user_id] = this.sockets[user_id] || {};
+    //this.sockets[user_id][socket.id] = socket;
 
     socket.onAny((event, ...args) => {
       console.log(`[${event}][${user_id}][${socket.id}]`, args);
     });
     socket.on("disconnect", (reason) => {
       console.log(`[disconnect][${user_id}][${socket.id}] ${reason}`);
-      delete this.sockets[user_id][socket.id];
+      //delete this.sockets[user_id][socket.id];
     });
 
     socket.on("message", async (data) => {
