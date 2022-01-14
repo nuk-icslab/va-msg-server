@@ -10,9 +10,13 @@ const { Server } = require("socket.io");
 const ObjServer = require("./obj_server");
 const mongoose = require("mongoose");
 
-(async () => {
-  await mongoose.connect("mongodb://localhost:27017/val");
-})();
+mongoose
+  .connect("mongodb://localhost:27017/val", {
+    serverSelectionTimeoutMS: 5000,
+  })
+  .catch((error) =>
+    logger.error("[MongoDB] Failed connecting database ", error)
+  );
 const server = createServer(
   use_https
     ? {

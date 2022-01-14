@@ -1,13 +1,32 @@
-const Message = require("./model/message");
+const Message = require("../model/message");
+const SealIMClient = require("./seal_im_client");
 
 class ObjServer {
   constructor(io) {
     this.io = io;
+    this.seal_im_client = new SealIMClient();
     this.subscrib_list = {};
     this.sockets = {};
     this.io.on("connection", this.handleConnection.bind(this));
   }
-  handleConnection(socket) {
+  async handleConnection(socket) {
+    if (!("access_token" in socket.handshake.auth)) {
+      socket.disconnect();
+      return;
+    }
+    let access_token = socket.handshake.auth["access_token"];
+    try {
+      socket.data.user_id = await this.seal_im_client.getUserID(access_token);
+    } catch (e) {
+      console.log(e);
+    }
+    if (socket.data.user_id === null) {
+      console.log(
+        `[invaild] ${socket.id} has invail access_token ${access_token}`
+      );
+      socket.disconnect();
+      return;
+    }
     console.log(`[connected] ${socket.id}`);
     this.sockets[socket.id] = socket;
     socket.onAny((event, ...args) => {
