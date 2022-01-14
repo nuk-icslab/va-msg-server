@@ -8,32 +8,31 @@ class ObjServer {
     this.subscrib_list = {};
     this.sockets = {};
     this.io.on("connection", this.handleConnection.bind(this));
+    this.io.eio.pingTimeout = 120000; // 2 minutes
+    this.io.eio.pingInterval = 5000; // 5 seconds
   }
   async handleConnection(socket) {
-    if (!("access_token" in socket.handshake.auth)) {
-      socket.disconnect();
-      return;
-    }
-    let access_token = socket.handshake.auth["access_token"];
+    // Verify the access token before accept the connection
+    let user_id = null;
     try {
-      socket.data.user_id = await this.seal_im_client.getUserID(access_token);
+      user_id = await this.verifyAccessToken(socket);
+      socket.data.user_id = user_id;
     } catch (e) {
-      console.log(e);
-    }
-    if (socket.data.user_id === null) {
-      console.log(
-        `[invaild] ${socket.id} has invail access_token ${access_token}`
-      );
+      console.error(e);
       socket.disconnect();
       return;
     }
-    console.log(`[connected] ${socket.id}`);
-    this.sockets[socket.id] = socket;
+
+    console.log(`[connected][${user_id}][${socket.id}]`);
+    this.sockets[user_id] = this.sockets[user_id] || {};
+    this.sockets[user_id][socket.id] = socket;
+
     socket.onAny((event, ...args) => {
-      console.log(`[${event}][${socket.id}]`, args);
+      console.log(`[${event}][${user_id}][${socket.id}]`, args);
     });
-    socket.on("disconnect", () => {
-      delete this.sockets[socket.id];
+    socket.on("disconnect", (reason) => {
+      console.log(`[disconnect][${user_id}][${socket.id}] ${reason}`);
+      delete this.sockets[user_id][socket.id];
     });
 
     socket.on("message", async (data) => {
@@ -86,6 +85,30 @@ class ObjServer {
         (e) => e != socket.id
       );
       this.subscrib_list[group_id] = new_sub_list;
+    });
+  }
+  verifyAccessToken(socket) {
+    return new Promise(async (resolve, reject) => {
+      if (!("access_token" in socket.handshake.auth)) {
+        reject({
+          msg: "missing access_token field in the auth header",
+        });
+        return;
+      }
+      let access_token = socket.handshake.auth["access_token"];
+      let user_id = null;
+      try {
+        user_id = await this.seal_im_client.getUserID(access_token);
+      } catch (e) {
+        console.debug(e);
+      }
+      if (user_id === null) {
+        reject({
+          msg: `[invaild] ${socket.id} has invail access_token ${access_token}`,
+        });
+        return;
+      }
+      resolve(user_id);
     });
   }
 }
