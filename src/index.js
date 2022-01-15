@@ -7,8 +7,9 @@ if (use_https) {
 }
 const { readFileSync } = require("fs");
 const { Server } = require("socket.io");
-const ObjServer = require("./obj_server");
+const ChannelServer = require("./channelServer");
 const mongoose = require("mongoose");
+const logger = require("./logger");
 
 mongoose
   .connect("mongodb://localhost:27017/val", {
@@ -27,8 +28,8 @@ const server = createServer(
 );
 
 const io = new Server(server, { cors: { origin: "*" } });
-const obj_server = new ObjServer(io);
+const channel_server = new ChannelServer(io);
 
 server.listen(30000, () => {
-  console.log("listening on *:30000");
+  logger.info("[VAL][Channel Enabler] Listening on *:30000");
 });

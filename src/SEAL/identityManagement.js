@@ -6,13 +6,13 @@ if (process.env["NODE_ENV"] !== "production") {
 
 const axios = require("axios");
 const qs = require("qs");
-const seal_base_url = "https://seal.5gsvc:29549";
+const seal_config = require("./config");
 
 class SealIMClient {
   getUserID(access_token) {
     return new Promise(async (resolve, reject) => {
       try {
-        let req_str = `${seal_base_url}/oidc/me`;
+        let req_str = `${seal_config.base_url}/oidc/me`;
         let response = await axios({
           method: "post",
           url: req_str,

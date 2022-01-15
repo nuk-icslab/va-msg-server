@@ -1,10 +1,15 @@
 const Message = require("../model/message");
-const SealIMClient = require("./seal_im_client");
+const SealIMClient = require("./SEAL/identityManagement");
+const SealGMClient = require("./SEAL/groupManagement");
+const logger = require("./logger");
 
-class ObjServer {
+class ChannelServer {
   constructor(io) {
     this.io = io;
-    this.seal_im_client = new SealIMClient();
+    this.seal = {
+      im_client: new SealIMClient(),
+      gm_client: new SealGMClient(),
+    };
     //this.subscrib_list = {};
     //this.sockets = {};
     this.io.on("connection", this.handleConnection.bind(this));
@@ -18,28 +23,28 @@ class ObjServer {
       user_id = await this.verifyAccessToken(socket);
       socket.data.user_id = user_id;
     } catch (e) {
-      console.error(e);
+      logger.error(e.msg);
       socket.disconnect();
       return;
     }
 
-    console.log(`[connected][${user_id}][${socket.id}]`);
+    logger.info(`[VAL][connected][${user_id}][${socket.id}]`);
     //this.sockets[user_id] = this.sockets[user_id] || {};
     //this.sockets[user_id][socket.id] = socket;
 
     socket.onAny((event, ...args) => {
-      console.log(`[${event}][${user_id}][${socket.id}]`, args);
+      logger.debug(`[VAL][${event}][${user_id}][${socket.id}]`, args);
     });
     socket.on("disconnect", (reason) => {
-      console.log(`[disconnect][${user_id}][${socket.id}] ${reason}`);
+      logger.info(`[VAL][disconnect][${user_id}][${socket.id}] ${reason}`);
       //delete this.sockets[user_id][socket.id];
     });
 
     socket.on("message", async (data) => {
-      let { user_id, group_id, payload } = data;
-      // [TODO] Check whether user_id is in the VAL group
-      let user_id_in_val_group = true;
-      if (!user_id_in_val_group) {
+      let { group_id, payload } = data;
+      // Check whether user_id is in the VAL group
+      let user_in_val_group = await this.checkUserInGreoup(user_id, group_id);
+      if (!user_in_val_group) {
         socket.emit("rejeted", { reason: "Not in the VAL group" });
         return;
       }
@@ -55,6 +60,9 @@ class ObjServer {
         group_id,
         payload,
       });
+      logger.info(
+        `[VAL][message] Forwarded message from ${user_id} to ${group_id}`
+      );
 
       // message = message.content;
       // time;
@@ -87,10 +95,13 @@ class ObjServer {
     socket.on("subscribe", async (data) => {
       let { group_id } = data;
 
-      // [TODO] Check whether the user is in the VAL group
-      let user_in_val_group = true;
+      // Check whether the user is in the VAL group
+      let user_in_val_group = await this.checkUserInGreoup(user_id, group_id);
       if (user_in_val_group) {
         socket.join(group_id);
+        logger.info(
+          `[VAL][subscribe] ${user_id} sucessfully subscribe to channel ${group_id}`
+        );
       } else {
         socket.emit("rejeted", { reason: "Not in the VAL group" });
       }
@@ -109,6 +120,9 @@ class ObjServer {
     socket.on("unsubscribe", (data) => {
       let { group_id } = data;
       socket.leave(group_id);
+      logger.info(
+        `[VAL][unsubscribe] ${user_id} unsubscribe from channel ${group_id}`
+      );
       // if (!(group_id in this.subscrib_list)) return;
       // let new_sub_list = this.subscrib_list[group_id].filter(
       //   (e) => e != socket.id
@@ -127,19 +141,36 @@ class ObjServer {
       let access_token = socket.handshake.auth["access_token"];
       let user_id = null;
       try {
-        user_id = await this.seal_im_client.getUserID(access_token);
+        user_id = await this.seal.im_client.getUserID(access_token);
       } catch (e) {
-        console.debug(e);
+        logger.debug(e);
       }
       if (user_id === null) {
         reject({
-          msg: `[invaild] ${socket.id} has invail access_token ${access_token}`,
+          msg: `[VAL][invaild] ${socket.id} has invail access_token ${access_token}`,
         });
         return;
       }
       resolve(user_id);
     });
   }
+  checkUserInGreoup(user_id, group_id) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        let group_info = await this.seal.gm_client.groupDocumentsGroupDocIdGet(
+          group_id
+        );
+        resolve(
+          group_info["members"].some(
+            (member) => member["valUserId"] === user_id
+          )
+        );
+      } catch (e) {
+        logger.error(e);
+        resolve(false);
+      }
+    });
+  }
 }
 
-module.exports = ObjServer;
+module.exports = ChannelServer;
