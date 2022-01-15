@@ -1,0 +1,98 @@
+openapi: 3.0.0
+info:
+  title: VAL_Channel
+  description: |
+    API for VAL Channel service
+  version: "0.0.1"
+servers:
+  - url: "{apiRoot}/val-ch/v1"
+    variables:
+      apiRoot:
+        default: https://example.com
+        description: apiRoot as defined in clause 6.5 of 3GPP TS 29.549
+paths:
+  /subscribe:
+    post:
+      description: Subscribe messages from channels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group_id:
+                  type: array
+                  items:
+                    type: string
+                  example: ["TestVALGroup"]
+                nonce: # To authenticate the response
+                  type: string
+                  example: test_nonce
+                callbackUrl: # Callback URL
+                  type: string
+                  format: uri
+                  example: https://app.5gsvc/va-msg/v1/callback
+              required:
+                - callbackUrl
+                - group_id
+                - nonce
+      responses:
+        "201":
+          description: Webhook created
+      callbacks: # Callback definition
+        MessageEvent:
+          "{$request.body#/callbackUrl}": # The callback URL,
+            post:
+              requestBody: # Contents of the callback message
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        user_id:
+                          type: string
+                          example: TestVALUser
+                        group_id:
+                          type: string
+                          example: TestValGroup
+                        message:
+                          type: string
+                          example: Some message
+                        nonce:
+                          type: string
+                          example: test_nonce
+                          description: The nonce from the subscribe request
+                      required:
+                        - user_id
+                        - group_id
+                        - message
+                        - nonce
+              responses: # Expected responses to the callback message
+                "204":
+                  description: Release the message to channel
+                "403":
+                  description: Do not release the message to channel
+  /message:
+    post:
+      description: Publish a message to a channel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group_id:
+                  type: string
+                  example: "TestVALGroup"
+                content:
+                  type: string
+                  example: "The content of message"
+              required:
+                - group_id
+                - content
+      responses:
+        "200":
+          description: Message successfully published

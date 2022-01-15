@@ -1,0 +1,45 @@
+openapi: 3.0.0
+info:
+  title: VA_Message
+  description: |
+    API for VA messaging service
+  version: "0.0.1"
+servers:
+  - url: "{apiRoot}/va-msg/v1"
+    variables:
+      apiRoot:
+        default: https://example.com
+        description: apiRoot as defined in clause 6.5 of 3GPP TS 29.549
+paths:
+  /callback:
+    post:
+      requestBody: # Contents of the callback message
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  example: TestVALUser
+                group_id:
+                  type: string
+                  example: TestValGroup
+                message:
+                  type: string
+                  example: Some message
+                nonce:
+                  type: string
+                  example: test_nonce
+                  description: The nonce from the subscribe request
+              required:
+                - user_id
+                - group_id
+                - message
+                - nonce
+      responses: # Expected responses to the callback message
+        "204":
+          description: Release the message to channel
+        "403":
+          description: Do not release the message to channel
