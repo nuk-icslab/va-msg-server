@@ -64,16 +64,16 @@ class ChannelServer {
         `[VAL][message] Forwarded message from ${user_id} to ${group_id}`
       );
 
-      // message = message.content;
-      // time;
-      // // Store the message into database
-      // let new_msg = new Message({
-      //   user_id,
-      //   group_id,
-      //   message,
-      //   time,
-      // });
-      // await new_msg.save();
+      // [TODO] Move to VA server
+      // Store the message into database
+      let { content, time } = payload;
+      let new_msg = new Message({
+        user_id,
+        group_id,
+        content,
+        time,
+      });
+      await new_msg.save();
 
       // // Forward to subscribers
       // if (group_id in this.subscrib_list) {
@@ -110,12 +110,22 @@ class ChannelServer {
       //   this.subscrib_list[group_id] = [];
       // }
       // this.subscrib_list[group_id].push(socket.id);
-      // // Look for all of the messages for the group
-      // let msgs = await Message.find({ group_id });
-      // // Send to the incoming client
-      // msgs.forEach((msg) => {
-      //   socket.emit("message", msg);
-      // });
+
+      // [TODO] Move to VA server
+      // Look for all of the messages for the group
+      let msgs = await Message.find({ group_id });
+      // Send to the incoming client
+      msgs.forEach((msg) => {
+        let { user_id, content, time } = msg;
+        socket.emit("message", {
+          user_id,
+          group_id,
+          payload: {
+            content,
+            time,
+          },
+        });
+      });
     });
     socket.on("unsubscribe", (data) => {
       let { group_id } = data;

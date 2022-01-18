@@ -1,12 +1,10 @@
-const use_https = false;
+const use_https = true;
 
-if (use_https) {
-  var { createServer } = require("https");
-} else {
-  var { createServer } = require("http");
-}
+const https = require("https");
+const http = require("http");
+const express = require("express");
 const { readFileSync } = require("fs");
-const { Server } = require("socket.io");
+const SocketIoServer = require("socket.io").Server;
 const ChannelServer = require("./channelServer");
 const mongoose = require("mongoose");
 const logger = require("./logger");
@@ -18,18 +16,26 @@ mongoose
   .catch((error) =>
     logger.error("[MongoDB] Failed connecting database ", error)
   );
-const server = createServer(
-  use_https
-    ? {
-        cert: readFileSync("certs/cert.pem"),
-        key: readFileSync("certs/key.pem"),
-      }
-    : {}
-);
 
-const io = new Server(server, { cors: { origin: "*" } });
+const app = express();
+app.use("/", express.static("public"));
+
+var server = {};
+if (use_https) {
+  server = https.createServer(
+    {
+      cert: readFileSync("certs/app.crt"),
+      key: readFileSync("certs/app.key"),
+    },
+    app
+  );
+} else {
+  server = http.createServer(app);
+}
+
+const io = new SocketIoServer(server, { cors: { origin: "*" } });
 const channel_server = new ChannelServer(io);
 
-server.listen(30000, () => {
-  logger.info("[VAL][Channel Enabler] Listening on *:30000");
+server.listen(443, () => {
+  logger.info("[VAL][Channel Enabler] Listening on *:443");
 });
