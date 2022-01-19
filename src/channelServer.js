@@ -42,6 +42,7 @@ class ChannelServer {
 
     socket.on("message", async (data) => {
       let { group_id, payload } = data;
+
       // Check whether user_id is in the VAL group
       let user_in_val_group = await this.checkUserInGreoup(user_id, group_id);
       if (!user_in_val_group) {
@@ -167,9 +168,17 @@ class ChannelServer {
   checkUserInGreoup(user_id, group_id) {
     return new Promise(async (resolve, reject) => {
       try {
+        if (group_id === "" || user_id === "") {
+          resolve(false);
+          return;
+        }
         let group_info = await this.seal.gm_client.groupDocumentsGroupDocIdGet(
           group_id
         );
+        if (!("members" in group_info)) {
+          resolve(false);
+          return;
+        }
         resolve(
           group_info["members"].some(
             (member) => member["valUserId"] === user_id
