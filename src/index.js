@@ -24,8 +24,8 @@ var server = {};
 if (use_https) {
   server = https.createServer(
     {
-      cert: readFileSync("certs/app.crt"),
-      key: readFileSync("certs/app.key"),
+      cert: readFileSync("certs/server.crt"),
+      key: readFileSync("certs/server.key"),
     },
     app
   );
