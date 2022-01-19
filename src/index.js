@@ -38,4 +38,5 @@ const channel_server = new ChannelServer(io);
 
 server.listen(443, () => {
   logger.info("[VAL][Channel Enabler] Listening on *:443");
+  logger.info("[APP] Listening on *:443");
 });
