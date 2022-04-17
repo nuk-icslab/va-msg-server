@@ -8,6 +8,8 @@ const SocketIoServer = require("socket.io").Server;
 const ChannelServer = require("./channelServer");
 const mongoose = require("mongoose");
 const logger = require("./logger");
+const cors = require("cors");
+const { getLocation } = require("./SEAL/locationManagement");
 
 mongoose
   .connect("mongodb://localhost:27017/val", {
@@ -18,7 +20,34 @@ mongoose
   );
 
 const app = express();
+app.use(cors());
 app.use("/", express.static("public"));
+
+// [TODO] Get config based on user loaction
+app.get("/config/:user_id", async function (req, res) {
+  logger.debug(`Fetching the geolocation of user ${req.params.user_id}`);
+  if (req.params.user_id === undefined) {
+    res.sendStatus(404);
+  } else {
+    let { data } = await getLocation(req.params.user_id);
+    let { lat, lng } = data;
+    let region = "";
+    if (lat > 23.5) {
+      region = "TPE";
+    } else {
+      region = "KHH";
+    }
+    logger.debug(`lat: ${lat}, lng: ${lng}`);
+    res.send({
+      user_id: req.params.user_id,
+      user_agent: req.get("User-Agent"),
+      remote_ip: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+      lat,
+      lng,
+      region,
+    });
+  }
+});
 
 var server = {};
 if (use_https) {
