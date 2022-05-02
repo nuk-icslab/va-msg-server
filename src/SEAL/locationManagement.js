@@ -13,7 +13,7 @@ if (process.env["NODE_ENV"] !== "production") {
 // }
 
 async function getLocation(userId) {
-  let req_str = `${seal_config.base_url}/lm/location/${userId}`;
+  let req_str = `${seal_config.base_url}/ss-lm/v1/location/${userId}`;
   let response = await axios.get(req_str);
   return response;
 }

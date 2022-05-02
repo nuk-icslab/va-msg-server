@@ -12,7 +12,7 @@ class SealIMClient {
   getUserID(access_token) {
     return new Promise(async (resolve, reject) => {
       try {
-        let req_str = `${seal_config.base_url}/oidc/me`;
+        let req_str = `${seal_config.base_url}/oidc/v1/me`;
         let response = await axios({
           method: "post",
           url: req_str,
